@@ -70,25 +70,34 @@ via_data.table <- function(data, id.vars, conditions) {
   check_inputs(data, id.vars, conditions)
   stopifnot(inherits(data, 'data.table'))
 
+  cond_levels <- LETTERS[1:12]
+  cond_col <- conditions
+  keep_cols <- c(id.vars, cond_col)
+
+  # stay within data.table to avoid unnecessary copies
+  `%chin%` <- get("%chin%", asNamespace("data.table"))
+  dt <- data[get(cond_col) %chin% cond_levels, ..keep_cols]
+  dt[, (cond_col) := factor(get(cond_col), levels = cond_levels)]
+  dt <- unique(dt, by = c(id.vars, cond_col))
+  dt[, flag := 1L]
+
+  cast_formula <- as.formula(paste(paste(id.vars, collapse = "+"), "~", cond_col))
+
   rtn <- data.table::dcast(
-    data = unique(subset(data, data[[conditions]] %in% LETTERS[1:12])),
-    formula = as.formula(paste(paste(id.vars, collapse = "+"), "~", conditions)),
-    fun.aggregate = function(x) { as.integer(length(x) > 0) },
-    value.var = conditions,
-    fill = 0L
+    data = dt,
+    formula = cast_formula,
+    value.var = "flag",
+    fun.aggregate = max,
+    fill = 0L,
+    drop = FALSE
   )
 
-  # verify all conditons have been flagged
-  for (j in LETTERS[which(!(LETTERS[1:12] %in% names(rtn)))]) {
-    data.table::set(rtn, j = j, value = rep(0L, nrow(rtn)))
-  }
+  iddf <- unique(data[, ..id.vars], by = id.vars)
+  data.table::setkeyv(rtn, id.vars)
+  rtn <- rtn[iddf, on = id.vars]
 
-  iddf <- unique(subset(data, subset = TRUE, select = id.vars))
-
-  rtn <- merge(x = iddf, y = rtn, all.x = TRUE, by = names(iddf))
-  rtn[is.na(rtn)] <- 0L
-
-  data.table::setcolorder(rtn, c(id.vars, LETTERS[1:12]))
+  data.table::setnafill(rtn, cols = cond_levels, fill = 0L)
+  data.table::setcolorder(rtn, c(id.vars, cond_levels))
 
   rtn
 }
@@ -176,8 +185,6 @@ via_base_matrix <- function(data, id.vars, conditions) {
 
   cbind(iddf, as.data.frame(X, check.names = FALSE))
 }
-
-
 
 
 
