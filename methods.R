@@ -2,7 +2,7 @@
 # file: methods.R
 #
 # define several methods for use in a presentation to the Devner R User Group on
-# using tidyverse, data.table, and base R method for building a inidcatior 
+# using tidyverse, data.table, and base R method for building a inidcatior
 ################################################################################
 
 generate_data <- function(n.patients = 10L) {
@@ -110,54 +110,93 @@ via_data.table <- function(data, id.vars, conditions) {
 via_stats_reshape <- function(data, id.vars, conditions) {
   check_inputs(data, id.vars, conditions)
 
+  cond_levels <- LETTERS[1:12]
+  iddf <- unique(data[, id.vars, drop = FALSE])
+
+  idx <- data[[conditions]] %in% cond_levels
+  cond_data <- data[idx, c(id.vars, conditions), drop = FALSE]
+  cond_data <- cond_data[!duplicated(cond_data), , drop = FALSE]
+
+  if (!nrow(cond_data)) {
+    zeros <- as.data.frame(matrix(0L, nrow = nrow(iddf), ncol = length(cond_levels)))
+    names(zeros) <- cond_levels
+    return(cbind(iddf, zeros))
+  }
+
+  cond_data[[conditions]] <- factor(cond_data[[conditions]], levels = cond_levels)
+  cond_data[["flag"]] <- 1L
+
   rtn <-
     stats::reshape(
-      data = unique(subset(data, data[[conditions]] %in% LETTERS[1:12])),
+      data = cond_data,
       idvar = id.vars,
       timevar = conditions,
-      v.names = conditions,
+      v.names = "flag",
       direction = "wide"
     )
 
-  for (j in names(rtn)[-which(names(data) %in% id.vars)]) {
-    flag <- as.integer(!is.na(rtn[[j]]))
-    if (length(flag) == 0) {
-      flag <- rep(0L, nrow(rtn))
+  cond_cols <- paste0("flag.", cond_levels)
+  missing <- cond_cols[!cond_cols %in% names(rtn)]
+  if (length(missing)) {
+    rtn[missing] <- 0L
+  }
+
+  rtn[cond_cols] <- lapply(
+    cond_cols,
+    function(nm) {
+      col <- rtn[[nm]]
+      col[is.na(col)] <- 0L
+      as.integer(col)
     }
-    rtn[[j]] <- flag
-  }
+  )
 
-  names(rtn) <- sub(pattern = paste0(conditions, "."), "", names(rtn), fixed = TRUE)
-
-  # verify all conditons have been flagged
-  for (j in LETTERS[which(!(LETTERS[1:12] %in% names(rtn)))]) {
-    rtn[[j]] <- rep(0L, nrow(rtn))
-  }
-
-  colorder <- c(id.vars, LETTERS[1:12])
+  names(rtn)[match(cond_cols, names(rtn))] <- cond_levels
 
   rtn <-
     merge(
-      x = unique(data[, id.vars, drop = FALSE]),
-      y = rtn[, colorder, drop = FALSE],
+      x = iddf,
+      y = rtn[, c(id.vars, cond_levels), drop = FALSE],
       all.x = TRUE,
       by = id.vars
     )
 
-  rtn[is.na(rtn)] <- 0L
+  rtn[cond_levels] <- lapply(rtn[cond_levels], function(x) { x[is.na(x)] <- 0L; x })
   rtn
 }
 
 via_reduce_merge <- function(data, id.vars, conditions) {
   check_inputs(data, id.vars, conditions)
+  cond_levels <- LETTERS[1:12]
   iddf <- unique(data[, id.vars, drop = FALSE])
 
-  cnds <- lapply(LETTERS[1:12], function(x) {
-    idx <- data[[conditions]] == x
-    rtn <- unique(data[idx, id.vars, drop = FALSE])
-    rtn[[x]] <- rep(1L, nrow(rtn))
-    rtn
-    })
+  cond_data <- data[data[[conditions]] %in% cond_levels, c(id.vars, conditions), drop = FALSE]
+  cond_data <- cond_data[!duplicated(cond_data), , drop = FALSE]
+
+  if (!nrow(cond_data)) {
+    zeros <- as.data.frame(matrix(0L, nrow = nrow(iddf), ncol = length(cond_levels)))
+    names(zeros) <- cond_levels
+    return(cbind(iddf, zeros))
+  }
+
+  cond_split <- split(cond_data[, id.vars, drop = FALSE], cond_data[[conditions]])
+  cond_split <- cond_split[cond_levels]
+
+  cnds <- lapply(seq_along(cond_split), function(i) {
+    chunk <- cond_split[[i]]
+    if (is.null(chunk) || !nrow(chunk)) {
+      return(NULL)
+    }
+    chunk[[cond_levels[i]]] <- 1L
+    chunk
+  })
+
+  cnds <- cnds[!vapply(cnds, is.null, logical(1))]
+
+  if (!length(cnds)) {
+    zeros <- as.data.frame(matrix(0L, nrow = nrow(iddf), ncol = length(cond_levels)))
+    names(zeros) <- cond_levels
+    return(cbind(iddf, zeros))
+  }
 
   cnds <- Reduce(
     f = function(x, y) { merge(x, y, all = TRUE, by = id.vars) },
@@ -165,30 +204,42 @@ via_reduce_merge <- function(data, id.vars, conditions) {
     init = iddf
   )
 
-  cnds[is.na(cnds)] <- 0L
-  cnds
+  cond_missing <- cond_levels[!cond_levels %in% names(cnds)]
+  if (length(cond_missing)) {
+    cnds[cond_missing] <- 0L
+  }
+
+  cnds[cond_levels] <- lapply(cnds[cond_levels], function(x) { x[is.na(x)] <- 0L; x })
+  cnds[, c(id.vars, cond_levels), drop = FALSE]
 }
 
 via_base_matrix <- function(data, id.vars, conditions) {
   check_inputs(data, id.vars, conditions)
 
+  cond_levels <- LETTERS[1:12]
   iddf <- unique(data[, id.vars, drop = FALSE])
-  cnds <- unique(subset(data, data[[conditions]] %in% LETTERS[1:12]))
 
-  X <- matrix(0L, nrow = nrow(iddf), ncol = 12)
-  colnames(X) <- LETTERS[1:12]
+  idx <- data[[conditions]] %in% cond_levels
+  cond_data <- data[idx, c(id.vars, conditions), drop = FALSE]
+  cond_data <- cond_data[!duplicated(cond_data), , drop = FALSE]
 
-  key_iddf <- do.call(paste, c(iddf, sep = "\r"))
-  key_cnds <- do.call(paste, c(cnds[, id.vars, drop = FALSE], sep = "\r"))
+  n_id <- nrow(iddf)
+  zero_mat <- matrix(0L, nrow = n_id, ncol = length(cond_levels))
+  colnames(zero_mat) <- cond_levels
 
-  ri <- match(key_cnds, key_iddf)
-  ci <- match(cnds[[conditions]], LETTERS[1:12])
-  keep <- !(is.na(ri) | is.na(ci))
-  if (any(keep)) {
-    X[cbind(ri[keep], ci[keep])] <- 1L
+  if (!nrow(cond_data)) {
+    return(cbind(iddf, as.data.frame(zero_mat, check.names = FALSE)))
   }
 
-  cbind(iddf, as.data.frame(X, check.names = FALSE))
+  key_iddf <- interaction(iddf[, id.vars, drop = FALSE], drop = TRUE, sep = "\r")
+  key_cnds <- interaction(cond_data[, id.vars, drop = FALSE], drop = TRUE, sep = "\r")
+
+  ri <- match(key_cnds, key_iddf)
+  ci <- match(cond_data[[conditions]], cond_levels)
+  keep <- !(is.na(ri) | is.na(ci))
+  if (any(keep)) {
+    zero_mat[cbind(ri[keep], ci[keep])] <- 1L
+  }
+
+  cbind(iddf, as.data.frame(zero_mat, check.names = FALSE))
 }
-
-
