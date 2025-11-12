@@ -1,0 +1,193 @@
+---
+title: "Using Base R instead of tidyverse or data.table"
+subtitle: "Denver R User Group"
+author: "Peter E. DeWitt, Ph.D.<br><peter.dewitt@cuanschutz.edu>"
+date: 04 December 2025
+output:
+ ioslides_presentation:
+   keep_md: false
+   widescreen: true
+   logo: drug-logo.jpeg
+   css: style.css
+   self_contained: true
+---
+
+
+```{r "setup", include = FALSE}
+set.seed(42)
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
+
+## Where is this comming from?
+
+* The tidyverse is great
+
+* data.table is great
+
+* I prefer data.table over tidyverse
+
+* I'd rather use tidyverse or data.table in a data analysis script than base-R
+ in almost every possible case
+
+* When writting a R package I want _zero_ imports of other namespaces
+
+## Example task
+
+Given a long data.frame with several id columns and a character column, build a indicator data.frame.
+
+<div class="columns-2">
+**Input**
+
+```{r echo = FALSE, results = "asis"}
+tab <- data.table::fread(text = '
+  id1 , id2 , condition
+  "A"  , 1    , "X"
+  "A"  , 1    , "Y"
+  "A"  , 2    , "Y"
+  "B"  , 1    , "Z"
+',
+colClasses = "character"
+)
+
+knitr::kable(tab, format = "html") |>
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+**Output**
+
+```{r echo = FALSE, results = "asis"}
+tab <- data.table::fread(text = '
+  id1 , id2 , X , Y , Z
+  "A"  , 1    , 1 , 1 , 0
+  "A"  , 2    , 0 , 1 , 0
+  "B"  , 1    , 0 , 0 , 1
+',
+colClasses = "character"
+)
+
+knitr::kable(tab, format = "html") |>
+  kableExtra::kable_styling(full_width = FALSE)
+```
+</div>
+
+# Examples
+
+## Objective:
+
+* Input: data has id columns and a condition column.  The condition column is a
+character vector with the elements `c("", LETTERS)`
+
+* Output: a data.frame with one row for each id.  one column for each of the
+  conditions A-L.  Each of the condition columns are 0/1 integers for flagging
+  if the id had the condition
+
+## Generate Data
+
+Let's define some methods, veiw code in `methods.R`
+
+```{r}
+source("methods.R")
+set.seed(42)
+data <- generate_data(n.patients = 2)
+TBL <- tibble::as_tibble(data)
+DT  <- data.table::copy(data)
+data.table::setDT(DT)
+DT
+```
+
+## Different methods to explore
+
+* `via_tidyverse()`
+* `via_data.table()`
+* `via_stats_reshape()`
+* `via_reduce_merge()`
+* `via_base_matrix()`
+
+Let's look at `methods.R`
+
+## Call each method
+
+```{r}
+rtn_tidy <-
+  via_tidyverse(TBL, id.vars = c("pid", "eid"), conditions = "condition")
+
+rtn_dt <- 
+  via_data.table(DT, id.vars = c("pid", "eid"), conditions = "condition")
+
+rtn_reshape <-
+  via_stats_reshape(data, id.vars = c("pid", "eid"), conditions = "condition")
+
+rtn_reduce_merge <-
+  via_reduce_merge(data, id.vars = c("pid", "eid"), conditions = "condition")
+
+rtn_base_matrix  <-
+  via_base_matrix(data, id.vars = c("pid", "eid"), conditions = "condition")
+```
+
+## Same results?
+
+```{r}
+all.equal(rtn_tidy, rtn_dt,           check.class = FALSE, check.attributes = FALSE)
+all.equal(rtn_tidy, rtn_reshape,      check.class = FALSE, check.attributes = FALSE)
+all.equal(rtn_tidy, rtn_reduce_merge, check.class = FALSE, check.attributes = FALSE)
+all.equal(rtn_tidy, rtn_base_matrix,  check.class = FALSE, check.attributes = FALSE)
+```
+
+## For 10 patients
+```{r, echo = FALSE}
+knitr::include_graphics("benchmarks_n10.png")
+```
+
+## For 100 patients
+```{r, echo = FALSE}
+knitr::include_graphics("benchmarks_n100.png")
+```
+
+## For 1,000 patients
+```{r, echo = FALSE}
+knitr::include_graphics("benchmarks_n1000.png")
+```
+
+## For 10,000 patients
+```{r, echo = FALSE}
+knitr::include_graphics("benchmarks_n10000.png")
+```
+
+## For 100,000 patients
+```{r, eval = FALSE, echo = FALSE}
+knitr::include_graphics("benchmarks_n100000.png")
+```
+
+# Why?
+
+## Dependencies can be a pain
+
+* Story time 1:
+  * Working in REDACTED's system
+    * Zero access to CRAN
+    * May request install of packages from CRAN
+  * I wanted my qwraps2 package installed
+  * Rejected request: conflict with specific versions of namespaces which were
+    imported by namespaces qwraps2 was importing.
+
+  * Frustations:
+    * blocking code was not part of the tool I wanted to have access too.
+
+* Story Time 2:
+  * old machine
+
+# If you're building a package - how do you support a namespace without importing it?
+
+## requireNamespace
+
+# Thank you for your time
+
+<img width=25% src="drug-logo.jpeg" align='left'> </img>
+
+**_Questions?_**
+
+**_Comments?_**
+
+**_Other Solutions?_**
+
