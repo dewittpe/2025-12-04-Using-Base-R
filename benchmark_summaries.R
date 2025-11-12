@@ -16,9 +16,10 @@ times[, c("method", "N", "iteration") := tstrsplit(file, "/")]
 times[, N := as.integer(N)]
 times[, iteration := as.integer(sub("\\.dput", "", iteration))]
 
-ggplot2::ggplot(times) + 
+g1 <-
+  ggplot2::ggplot(times) +
   ggplot2::theme_bw() +
-  ggplot2::aes(x = N, y = seconds, color = method) + 
+  ggplot2::aes(x = N, y = seconds, color = method) +
   ggplot2::geom_point(alpha = 0.2) +
   ggplot2::scale_x_log10(name = "Patients", labels = scales::label_comma()) +
   ggplot2::scale_y_log10(name = "Seconds") +
@@ -29,4 +30,8 @@ ggplot2::ggplot(times) +
     legend.position = "bottom"
   )
 
-
+if (interactive()) {
+  g1
+} else {
+  ggplot2::ggsave(plot = g1, filename = "benchmark_summaries.png")
+}

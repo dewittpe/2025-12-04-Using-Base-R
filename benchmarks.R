@@ -3,15 +3,13 @@ source('methods.R')
 cargs <- commandArgs(trailingOnly = TRUE)
 if (length(cargs) == 0) {
   cargs <- "via_base_matrix/100/1.rds"
-} else if (length(cargs) == 1) {
- # do nothing
-} else {
+} else if (length(cargs) > 1) {
   stop("expected commandArgs of length 0 or 1")
-}
+} 
 cargs <- strsplit(cargs, split = "/")[[1]]
 METHOD <- cargs[1]
 N <- as.integer(cargs[2])
-ITERATION <- as.integer(cargs[3])
+ITERATION <- as.integer(sub("\\.rds", "", cargs[3]))
 
 # create output directory if needed
 outdir <- file.path(METHOD, N)
