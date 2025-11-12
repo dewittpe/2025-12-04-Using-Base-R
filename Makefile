@@ -3,8 +3,8 @@ RCMDBATCHVANILLA := R CMD BATCH --vanilla
 RVANILLA := R --vanilla --quiet
 RSCRIPTVANILLA := Rscript --vanilla --quiet
 
-N := 10 100 1000
-ITR :=  $(shell seq 1 1000)
+N := 10 100 1000 10000 100000
+ITR :=  $(shell seq 1 100)
 METHODS := via_base_matrix via_tidyverse via_data.table via_stats_reshape via_reduce_merge
 BENCHMARKS := $(foreach m,$(METHODS),$(foreach i,$(ITR),$(foreach n,$(N),$(m)/$(n)/$(i).dput)))
 
