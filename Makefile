@@ -8,6 +8,26 @@ ITR :=  $(shell seq 1 100)
 METHODS := via_base_matrix via_tidyverse via_data.table via_data.table_threads1 via_data.table_threads2 via_data.table_threads4 via_stats_reshape via_reduce_merge
 BENCHMARKS := $(foreach m,$(METHODS),$(foreach i,$(ITR),$(foreach n,$(N),$(m)/$(n)/$(i).dput)))
 
+define REGISTER_METHOD
+METHOD_DEPS_$(subst .,_,$(1)) := methods.R R/common.R $(2)
+endef
+
+$(eval $(call REGISTER_METHOD,via_base_matrix,R/via_base_matrix.R))
+$(eval $(call REGISTER_METHOD,via_tidyverse,R/via_tidyverse.R))
+$(eval $(call REGISTER_METHOD,via_data.table,R/via_data.table.R))
+$(eval $(call REGISTER_METHOD,via_data.table_threads1,R/via_data.table.R))
+$(eval $(call REGISTER_METHOD,via_data.table_threads2,R/via_data.table.R))
+$(eval $(call REGISTER_METHOD,via_data.table_threads4,R/via_data.table.R))
+$(eval $(call REGISTER_METHOD,via_stats_reshape,R/via_stats_reshape.R))
+$(eval $(call REGISTER_METHOD,via_reduce_merge,R/via_reduce_merge.R))
+
+define METHOD_RULE
+$(1)/%/%.dput: benchmarks.R $$(METHOD_DEPS_$(subst .,_,$(1)))
+	$$(RSCRIPTVANILLA) $$< $$*
+endef
+
+$(foreach m,$(METHODS),$(eval $(call METHOD_RULE,$(m))))
+
 CRAN = 'https://cran.rstudio.com'
 
 .INTERMEDIATE: slides.Rmd
@@ -26,9 +46,6 @@ all : .pkgs slides.html
 
 %.Rout: %.R
 	$(RCMDBATCHVANILLA) $< $@
-
-%.dput: benchmarks.R methods.R
-	$(RSCRIPTVANILLA) $< $*
 
 benchmark_summaries.png: benchmark_summaries.R $(BENCHMARKS)
 	$(RSCRIPTVANILLA) $<
