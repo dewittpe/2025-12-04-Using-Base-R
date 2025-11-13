@@ -107,6 +107,29 @@ via_data.table <- function(data, id.vars, conditions) {
   rtn
 }
 
+via_data.table_threads1 <- function(data, id.vars, conditions) {
+  via_data.table_with_threads(data, id.vars, conditions, threads = 1L)
+}
+
+via_data.table_threads2 <- function(data, id.vars, conditions) {
+  via_data.table_with_threads(data, id.vars, conditions, threads = 2L)
+}
+
+via_data.table_threads4 <- function(data, id.vars, conditions) {
+  via_data.table_with_threads(data, id.vars, conditions, threads = 4L)
+}
+
+via_data.table_with_threads <- function(data, id.vars, conditions, threads = NULL) {
+  if (is.null(threads)) {
+    return(via_data.table(data, id.vars, conditions))
+  }
+
+  old_threads <- data.table::getDTthreads()
+  on.exit(data.table::setDTthreads(old_threads), add = TRUE)
+  data.table::setDTthreads(threads)
+  via_data.table(data, id.vars, conditions)
+}
+
 via_stats_reshape <- function(data, id.vars, conditions) {
   check_inputs(data, id.vars, conditions)
 

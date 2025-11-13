@@ -5,7 +5,7 @@ RSCRIPTVANILLA := Rscript --vanilla --quiet
 
 N := 10 20 50 100 200 500 1000 2000 5000 10000 20000 50000 100000 200000
 ITR :=  $(shell seq 1 100)
-METHODS := via_base_matrix via_tidyverse via_data.table via_stats_reshape via_reduce_merge
+METHODS := via_base_matrix via_tidyverse via_data.table via_data.table_threads1 via_data.table_threads2 via_data.table_threads4 via_stats_reshape via_reduce_merge
 BENCHMARKS := $(foreach m,$(METHODS),$(foreach i,$(ITR),$(foreach n,$(N),$(m)/$(n)/$(i).dput)))
 
 CRAN = 'https://cran.rstudio.com'
