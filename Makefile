@@ -12,7 +12,7 @@ method_rfile = $(if $(findstring via_data.table,$1),R/via_data.table.R,R/$1.R)
 
 define METHOD_RULE
 benchmarks/$(1)/%.dput: benchmarks.R R/common.R $(call method_rfile,$(1))
-	$$(RSCRIPTVANILLA) $$< $(1)/$$*
+	$$(RSCRIPTVANILLA) $$< benchmarks/$(1)/$$*
 endef
 
 CRAN = 'https://cran.rstudio.com'
