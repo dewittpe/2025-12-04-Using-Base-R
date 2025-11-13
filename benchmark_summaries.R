@@ -1,18 +1,11 @@
 library(data.table)
 
-times <-
-  c("via_base_matrix",
-    "via_data.table",
-    "via_reduce_merge",
-    "via_tidyverse",
-    "via_stats_reshape"
-    )
-times <- lapply(times, list.files, recursive = TRUE, full.names = TRUE)
+times <- lapply("benchmarks", list.files, recursive = TRUE, full.names = TRUE)
 times <- unlist(times)
 times <- sapply(times, dget)
 times <- data.table::data.table(file = names(times), seconds = times)
 
-times[, c("method", "N", "iteration") := tstrsplit(file, "/")]
+times[, c("method", "N", "iteration") := tstrsplit(file, "/")[-1]]
 times[, N := as.integer(N)]
 times[, iteration := as.integer(sub("\\.dput", "", iteration))]
 
@@ -22,7 +15,7 @@ g1 <-
   ggplot2::aes(x = N, y = seconds, color = method) +
   ggplot2::geom_point(alpha = 0.2) +
   ggplot2::scale_x_log10(name = "Patients", labels = scales::label_comma()) +
-  ggplot2::scale_y_log10(name = "Seconds") +
+  ggplot2::scale_y_log10(name = "Seconds", labels = scales::label_number()) +
   ggplot2::annotation_logticks(sides = "bl") +
   ggplot2::stat_smooth(formula = y ~ x, method = "loess") +
   ggplot2::theme(
