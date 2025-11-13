@@ -112,7 +112,7 @@ Let's look at `methods.R`
 rtn_tidy <-
   via_tidyverse(TBL, id.vars = c("pid", "eid"), conditions = "condition")
 
-rtn_dt <- 
+rtn_dt <-
   via_data.table(DT, id.vars = c("pid", "eid"), conditions = "condition")
 
 rtn_reshape <-
@@ -141,6 +141,26 @@ all.equal(rtn_tidy, rtn_reduce_merge, check.class = FALSE, check.attributes = FA
 all.equal(rtn_tidy, rtn_base_matrix,  check.class = FALSE, check.attributes = FALSE)
 ```
 
+## Benchmark data.table behavior
+
+```{r echo=FALSE, out.width="80%"}
+knitr::include_graphics("benchmark_dt_summaries.png")
+```
+
+* data.table by default uses Ncpu/2 threads
+* `_overloaded` 72 threads with 140 parallel process
+* `_threadsX` number of threads, process limited to keep CPU load < 100%
+* `<no suffix>` 72 threads, processes limited to keep CPU load < 100%
+
+## Benchmark behavior
+
+```{r echo=FALSE, out.width="80%"}
+knitr::include_graphics("benchmark_summaries.png")
+```
+
+* The tidyverse pays a constant penalty (tidy-eval, tibble
+  conversions, `pivot_wider()` bookkeeping), which hides the early linear growth
+  until the number of rows is large enough to overcome the overhead.
 
 # Why?
 
@@ -173,4 +193,3 @@ all.equal(rtn_tidy, rtn_base_matrix,  check.class = FALSE, check.attributes = FA
 **_Comments?_**
 
 **_Other Solutions?_**
-
