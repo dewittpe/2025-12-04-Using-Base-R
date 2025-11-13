@@ -8,8 +8,10 @@ ITR :=  $(shell seq 1 100)
 METHODS := via_base_matrix via_tidyverse via_data.table via_data.table_threads1 via_data.table_threads2 via_data.table_threads4 via_stats_reshape via_reduce_merge
 BENCHMARKS := $(foreach m,$(METHODS),$(foreach i,$(ITR),$(foreach n,$(N),benchmarks/$(m)/$(n)/$(i).dput)))
 
+method_rfile = $(if $(findstring via_data.table,$1),R/via_data.table.R,R/$1.R)
+
 define METHOD_RULE
-benchmarks/$(1)/%.dput: benchmarks.R R/common.R R/$(1).R
+benchmarks/$(1)/%.dput: benchmarks.R R/common.R $(call method_rfile,$(1))
 	$$(RSCRIPTVANILLA) $$< $(1)/$$*
 endef
 
