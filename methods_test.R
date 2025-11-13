@@ -1,10 +1,13 @@
-source("methods.R")
+for (f in list.files(path = "R", full.names = TRUE)) {
+  source(f)
+}
+
+
 set.seed(42)
 data <- generate_data(n.patients = 2)
 TBL <- tibble::as_tibble(data)
 DT  <- data.table::copy(data)
 data.table::setDT(DT)
-#DT
 
 rtn_tidy <-
   via_tidyverse(TBL, id.vars = c("pid", "eid"), conditions = "condition")
