@@ -23,7 +23,7 @@ if (!dir.exists(outdir)) {
 # set seed and build data
 set.seed(ITERATION)
 data <- generate_data(n.patients = N)
-if (METHOD == "via_data.table") {
+if (startsWith(METHOD, "via_data.table")) {
   data.table::setDT(data)
 }
 

@@ -87,7 +87,9 @@ character vector with the elements `c("", LETTERS)`
 Let's define some methods, veiw code in `methods.R`
 
 ```{r}
-source("methods.R")
+for (f in list.files(path = "R", full.names = TRUE)) {
+  source(f)
+}
 set.seed(42)
 data <- generate_data(n.patients = 2)
 TBL <- tibble::as_tibble(data)
@@ -143,7 +145,7 @@ all.equal(rtn_tidy, rtn_base_matrix,  check.class = FALSE, check.attributes = FA
 
 ## Benchmark data.table behavior
 
-```{r echo=FALSE, out.width="80%"}
+```{r echo=FALSE, out.width="100%"}
 knitr::include_graphics("benchmark_dt_summaries.png")
 ```
 
@@ -154,7 +156,7 @@ knitr::include_graphics("benchmark_dt_summaries.png")
 
 ## Benchmark behavior
 
-```{r echo=FALSE, out.width="80%"}
+```{r echo=FALSE, out.width="100%"}
 knitr::include_graphics("benchmark_summaries.png")
 ```
 
